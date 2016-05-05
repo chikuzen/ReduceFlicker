@@ -171,7 +171,7 @@ SFINLINE __m256i average(const __m256i& x, const __m256i& y)
 
 SFINLINE __m128i blendv(const __m128i& x, const __m128i& y, const __m128i& m)
 {
-    return or_reg(and_reg(m, y), _mm_andnot_si128(m, x));
+    return or_reg(and_reg(m, y), andnot_reg(m, x));
 }
 
 SFINLINE __m256i blendv(const __m256i& x, const __m256i& y, const __m256i& m)
