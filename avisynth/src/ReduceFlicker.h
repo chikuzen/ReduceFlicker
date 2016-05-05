@@ -3,6 +3,8 @@
 
 #include <cstdint>
 
+#define REDUCE_FLICKER_VERSION "0.0.0"
+
 enum arch_t {
     NO_SIMD = 0,
     USE_SSE2 = 1,

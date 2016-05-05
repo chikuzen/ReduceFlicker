@@ -167,5 +167,5 @@ AvisynthPluginInit3(ise_t* env, const AVS_Linkage* const vectors)
     env->AddFunction("ReduceFlicker",
                      "c[strength]i[aggressive]b[grey]b[opt]i",
                      ReduceFlicker::create, nullptr);
-    return "ReduceFlicker for avs2.6";
+    return "ReduceFlicker for avs2.6/avs+ ver. " REDUCE_FLICKER_VERSION;
 }
