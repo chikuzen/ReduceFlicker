@@ -1,0 +1,16 @@
+ReduceFlicker-src/*
+avisynth/archives/*
+avisynth/src/Debug/*
+avisynth/src/Release/*
+avisynth/src/x64/*
+*.dll
+*.avs
+*.sln
+*.opensdf
+*.db
+*.opendb
+*.filters
+*.sdf
+*.suo
+*.user
+*.zip
