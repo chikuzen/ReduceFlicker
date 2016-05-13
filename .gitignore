@@ -3,8 +3,14 @@ avisynth/archives/*
 avisynth/src/Debug/*
 avisynth/src/Release/*
 avisynth/src/x64/*
+vapoursynth/vs2015/Debug/*
+vapoursynth/vs2015/Release/*
+vapoursynth/vs2015/x64/*
 *.dll
 *.avs
+*.avsi
+*.vpy
+*.py
 *.sln
 *.opensdf
 *.db
