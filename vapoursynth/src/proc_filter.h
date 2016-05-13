@@ -30,26 +30,26 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 
 template <typename T>
-SFINLINE T absdiff(const T x, const T y)
+static F_INLINE T absdiff(const T x, const T y)
 {
     return x < y ? y - x : x - y;
 }
 
 template <typename T>
-SFINLINE T clamp(T x, T minimum, T maximum)
+static F_INLINE T clamp(T x, T minimum, T maximum)
 {
     return std::min(std::max(x, minimum), maximum);
 }
 
 template <typename T>
-SFINLINE T get_avg(T a, T b, T x)
+static F_INLINE T get_avg(T a, T b, T x)
 {
     int t = std::max((a + b + 1) / 2 - 1, 0);
     return static_cast<T>((t + x + 1) / 2);
 }
 
 template <>
-SFINLINE float get_avg(float a, float b, float x)
+F_INLINE float get_avg(float a, float b, float x)
 {
     return (a + b + x + x) * 0.25f;
 }
@@ -119,7 +119,7 @@ proc_c(uint8_t* dstp, const uint8_t* currp, const uint8_t** prevp,
 
 
 template <typename T>
-SFINLINE void update_diff(T x, T y, T& d1, T& d2)
+static F_INLINE void update_diff(T x, T y, T& d1, T& d2)
 {
     T d = x - y;
     if (d >= 0) {
@@ -262,7 +262,8 @@ proc_simd(uint8_t* dstp, const uint8_t* currp, const uint8_t** prevp,
 
 
 template <typename T, typename V, arch_t ARCH>
-SFINLINE void update_diff(const V& x, const V& y, V& d1, V& d2, const V& zero)
+static F_INLINE void
+update_diff(const V& x, const V& y, V& d1, V& d2, const V& zero)
 {
     const V maxxy = max<T, ARCH>(x, y);
     const V mask = cmpeq<T>(x, maxxy);

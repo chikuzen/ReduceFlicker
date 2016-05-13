@@ -47,9 +47,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 
 #if defined(__GNUC__)
-    #define SFINLINE inline __attribute__((always_inline))
+    #define F_INLINE inline __attribute__((always_inline))
 #else
-    #define SFINLINE static __forceinline
+    #define F_INLINE __forceinline
 #endif
 
 
