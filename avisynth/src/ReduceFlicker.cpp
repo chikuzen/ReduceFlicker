@@ -37,11 +37,12 @@ class ReduceFlicker : public GenericVideoFilter {
     int numPlanes;
     const int strength;
     size_t align;
+    bool raccess;
 
     proc_filter_t mainProc;
 
 public:
-    ReduceFlicker(PClip c, int str, bool agr, bool grey, arch_t arch);
+    ReduceFlicker(PClip c, int str, bool agr, bool grey, arch_t arch, bool raccess);
     ~ReduceFlicker() {}
     PVideoFrame __stdcall GetFrame(int n, ise_t* env);
     static AVSValue __cdecl create(AVSValue args, void*, ise_t* env);
@@ -49,31 +50,71 @@ public:
 
 
 ReduceFlicker::
-ReduceFlicker(PClip c, int s, bool aggressive, bool grey, arch_t arch) :
-    GenericVideoFilter(c), strength(s)
+ReduceFlicker(PClip c, int s, bool aggressive, bool grey, arch_t arch, bool ra) :
+    GenericVideoFilter(c), strength(s), raccess(ra)
 {
     numPlanes = vi.IsY8() || grey ? 1 : 3;
     align = arch == USE_AVX2 ? 32 : 16;
     mainProc = get_main_proc(strength, aggressive, arch);
+    child->SetCacheHints(CACHE_WINDOW, strength == 3 ? 7 : 5);
 }
 
 
 PVideoFrame __stdcall ReduceFlicker::GetFrame(int n, ise_t* env)
 {
-    PVideoFrame prev[3], next[3];
+    PVideoFrame curr, prev[3], next[3];
     const int nf = vi.num_frames - 1;
-    switch (strength) {
-    case 3:
-        prev[2] = child->GetFrame(std::max(n - 3, 0), env);
-        next[2] = child->GetFrame(std::min(n + 3, nf), env);
-    case 2:
-        next[1] = child->GetFrame(std::min(n + 2, nf), env);
-    default:
-        prev[0] = child->GetFrame(std::max(n - 1, 0), env);
-        prev[1] = child->GetFrame(std::max(n - 2, 0), env);
-        next[0] = child->GetFrame(std::min(n + 1, nf), env);
+
+    if (raccess) {
+        switch (strength) {
+        case 3:
+            next[2] = child->GetFrame(std::min(n + 3, nf), env);
+            next[1] = child->GetFrame(std::min(n + 2, nf), env);
+            next[0] = child->GetFrame(std::min(n + 1, nf), env);
+            curr = child->GetFrame(n, env);
+            prev[0] = child->GetFrame(std::max(n - 1, 0), env);
+            prev[1] = child->GetFrame(std::max(n - 2, 0), env);
+            prev[2] = child->GetFrame(std::max(n - 3, 0), env);
+            break;
+        case 2:
+            next[1] = child->GetFrame(std::min(n + 2, nf), env);
+            next[0] = child->GetFrame(std::min(n + 1, nf), env);
+            curr = child->GetFrame(n, env);
+            prev[0] = child->GetFrame(std::max(n - 1, 0), env);
+            prev[1] = child->GetFrame(std::max(n - 2, 0), env);
+            break;
+        default:
+            next[0] = child->GetFrame(std::min(n + 1, nf), env);
+            curr = child->GetFrame(n, env);
+            prev[1] = child->GetFrame(std::max(n - 2, 0), env);
+            prev[0] = child->GetFrame(std::max(n - 1, 0), env);
+        }
+    } else {
+        switch (strength) {
+        case 3:
+            prev[2] = child->GetFrame(std::max(n - 3, 0), env);
+            prev[1] = child->GetFrame(std::max(n - 2, 0), env);
+            prev[0] = child->GetFrame(std::max(n - 1, 0), env);
+            curr = child->GetFrame(n, env);
+            next[0] = child->GetFrame(std::min(n + 1, nf), env);
+            next[1] = child->GetFrame(std::min(n + 2, nf), env);
+            next[2] = child->GetFrame(std::min(n + 3, nf), env);
+            break;
+        case 2:
+            prev[1] = child->GetFrame(std::max(n - 2, 0), env);
+            prev[0] = child->GetFrame(std::max(n - 1, 0), env);
+            curr = child->GetFrame(n, env);
+            next[0] = child->GetFrame(std::min(n + 1, nf), env);
+            next[1] = child->GetFrame(std::min(n + 1, nf), env);
+            break;
+        default:
+            prev[1] = child->GetFrame(std::max(n - 2, 0), env);
+            prev[0] = child->GetFrame(std::max(n - 1, 0), env);
+            curr = child->GetFrame(n, env);
+            next[0] = child->GetFrame(std::min(n + 1, nf), env);
+        }
     }
-    PVideoFrame curr = child->GetFrame(n, env);
+
     PVideoFrame dst = env->NewVideoFrame(vi, align);
 
     const int planes[] = {PLANAR_Y, PLANAR_U, PLANAR_V};
@@ -118,7 +159,7 @@ PVideoFrame __stdcall ReduceFlicker::GetFrame(int n, ise_t* env)
 extern int has_sse2();
 extern int has_avx2();
 
-static arch_t get_arch(int opt)
+static arch_t get_arch(int opt) noexcept
 {
     if (opt == NO_SIMD || !has_sse2()) {
         return NO_SIMD;
@@ -148,7 +189,8 @@ AVSValue __cdecl ReduceFlicker::create(AVSValue args, void*, ise_t* env)
         bool aggressive = args[2].AsBool(false);
         bool grey = args[3].AsBool(false);
         arch_t arch = get_arch(args[4].AsInt(USE_SSE2));
-        return new ReduceFlicker(clip, strength, aggressive, grey, arch);
+        bool raccess = args[5].AsBool(true);
+        return new ReduceFlicker(clip, strength, aggressive, grey, arch, raccess);
 
     } catch (const char* e) {
         env->ThrowError("ReduceFlicker: %s", e);
@@ -165,7 +207,7 @@ AvisynthPluginInit3(ise_t* env, const AVS_Linkage* const vectors)
 {
     AVS_linkage = vectors;
     env->AddFunction("ReduceFlicker",
-                     "c[strength]i[aggressive]b[grey]b[opt]i",
+                     "c[strength]i[aggressive]b[grey]b[opt]i[raccess]b",
                      ReduceFlicker::create, nullptr);
     return "ReduceFlicker for avs2.6/avs+ ver. " REDUCE_FLICKER_VERSION;
 }

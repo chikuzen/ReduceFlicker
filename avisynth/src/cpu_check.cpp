@@ -76,7 +76,7 @@ static inline int is_bit_set(int bitfield, int bit)
     return bitfield & (1 << bit);
 }
 
-static uint32_t get_simd_support_info(void)
+static uint32_t get_simd_support_info(void) noexcept
 {
     uint32_t ret = 0;
     int regs[4] = {0};
@@ -157,27 +157,27 @@ static uint32_t get_simd_support_info(void)
     return ret;
 }
 
-int has_sse2()
+int has_sse2() noexcept
 {
     return !!(get_simd_support_info() & CPU_SSE2_SUPPORT);
 }
 
-int has_ssse3()
+int has_ssse3() noexcept
 {
     return !!(get_simd_support_info() & CPU_SSSE3_SUPPORT);
 }
 
-int has_sse41()
+int has_sse41() noexcept
 {
     return !!(get_simd_support_info() & CPU_SSE4_1_SUPPORT);
 }
 
-int has_avx()
+int has_avx() noexcept
 {
     return !!(get_simd_support_info() & CPU_AVX_SUPPORT);
 }
 
-int has_avx2()
+int has_avx2() noexcept
 {
     return !!(get_simd_support_info() & CPU_AVX2_SUPPORT);
 }

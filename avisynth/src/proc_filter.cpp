@@ -46,6 +46,7 @@ static void __stdcall
 proc_c(uint8_t* dstp, const uint8_t** prevp, const uint8_t* currp,
        const uint8_t** nextp, const int dpitch, const int* ppitch,
        const int cpitch, const int* npitch, const int width, const int height)
+       noexcept
 {
     using std::min;
     using std::max;
@@ -113,6 +114,7 @@ static void __stdcall
 proc_a_c(uint8_t* dstp, const uint8_t** prevp, const uint8_t* currp,
          const uint8_t** nextp, const int dpitch, const int* ppitch,
          const int cpitch, const int* npitch, const int width, const int height)
+         noexcept
 {
     using std::min;
     using std::max;
@@ -178,7 +180,7 @@ static void __stdcall
 proc_simd(uint8_t* dstp, const uint8_t** prevp, const uint8_t* currp,
           const uint8_t** nextp, const int dpitch, const int* ppitch,
           const int cpitch, const int* npitch, const int width,
-          const int height)
+          const int height) noexcept
 {
     const uint8_t *prv0, *prv1, *prv2, *nxt0, *nxt1, *nxt2;
     prv0 = prevp[0];
@@ -244,7 +246,7 @@ static void __stdcall
 proc_a_simd(uint8_t* dstp, const uint8_t** prevp, const uint8_t* currp,
             const uint8_t** nextp, const int dpitch, const int* ppitch,
             const int cpitch, const int* npitch, const int width,
-            const int height)
+            const int height) noexcept
 {
     const uint8_t *prv0, *prv1, *prv2, *nxt0, *nxt1, *nxt2;
     prv0 = prevp[0];
@@ -307,7 +309,8 @@ proc_a_simd(uint8_t* dstp, const uint8_t** prevp, const uint8_t* currp,
 #include <tuple>
 
 
-proc_filter_t get_main_proc(int strength, bool aggressive, arch_t arch)
+proc_filter_t
+get_main_proc(int strength, bool aggressive, arch_t arch)
 {
     using std::make_tuple;
 
