@@ -305,42 +305,4 @@ proc_a_simd(uint8_t* dstp, const uint8_t** prevp, const uint8_t* currp,
 
 /* function selector -------------------------------------------------------*/
 
-#include <map>
-#include <tuple>
-
-
-proc_filter_t
-get_main_proc(int strength, bool aggressive, arch_t arch)
-{
-    using std::make_tuple;
-
-    std::map<std::tuple<int, bool, arch_t>, proc_filter_t> func;
-
-    func[make_tuple(1, false, NO_SIMD)] = proc_c<1>;
-    func[make_tuple(2, false, NO_SIMD)] = proc_c<2>;
-    func[make_tuple(3, false, NO_SIMD)] = proc_c<3>;
-
-    func[make_tuple(1, true, NO_SIMD)] = proc_a_c<1>;
-    func[make_tuple(2, true, NO_SIMD)] = proc_a_c<2>;
-    func[make_tuple(3, true, NO_SIMD)] = proc_a_c<3>;
-
-    func[make_tuple(1, false, USE_SSE2)] = proc_simd<__m128i, 1>;
-    func[make_tuple(2, false, USE_SSE2)] = proc_simd<__m128i, 2>;
-    func[make_tuple(3, false, USE_SSE2)] = proc_simd<__m128i, 3>;
-
-    func[make_tuple(1, true, USE_SSE2)] = proc_a_simd<__m128i, 1>;
-    func[make_tuple(2, true, USE_SSE2)] = proc_a_simd<__m128i, 2>;
-    func[make_tuple(3, true, USE_SSE2)] = proc_a_simd<__m128i, 3>;
-
-    func[make_tuple(1, false, USE_AVX2)] = proc_simd<__m256i, 1>;
-    func[make_tuple(2, false, USE_AVX2)] = proc_simd<__m256i, 2>;
-    func[make_tuple(3, false, USE_AVX2)] = proc_simd<__m256i, 3>;
-
-    func[make_tuple(1, true, USE_AVX2)] = proc_a_simd<__m256i, 1>;
-    func[make_tuple(2, true, USE_AVX2)] = proc_a_simd<__m256i, 2>;
-    func[make_tuple(3, true, USE_AVX2)] = proc_a_simd<__m256i, 3>;
-
-    return func[make_tuple(strength, aggressive, arch)];
-}
-
 

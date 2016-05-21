@@ -22,31 +22,49 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111, USA.
 
 
 #include <algorithm>
+#include <map>
+#include <tuple>
 
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <windows.h>
-#include <avisynth.h>
 #include "ReduceFlicker.h"
+#include "proc_filter.h"
 
 
-typedef IScriptEnvironment ise_t;
 
 
-class ReduceFlicker : public GenericVideoFilter {
-    int numPlanes;
-    const int strength;
-    size_t align;
-    bool raccess;
+proc_filter_t
+get_main_proc(int strength, bool aggressive, arch_t arch)
+{
+    using std::make_tuple;
 
-    proc_filter_t mainProc;
+    std::map<std::tuple<int, bool, arch_t>, proc_filter_t> func;
 
-public:
-    ReduceFlicker(PClip c, int str, bool agr, bool grey, arch_t arch, bool raccess);
-    ~ReduceFlicker() {}
-    PVideoFrame __stdcall GetFrame(int n, ise_t* env);
-    static AVSValue __cdecl create(AVSValue args, void*, ise_t* env);
-};
+    func[make_tuple(1, false, NO_SIMD)] = proc_c<1>;
+    func[make_tuple(2, false, NO_SIMD)] = proc_c<2>;
+    func[make_tuple(3, false, NO_SIMD)] = proc_c<3>;
+
+    func[make_tuple(1, true, NO_SIMD)] = proc_a_c<1>;
+    func[make_tuple(2, true, NO_SIMD)] = proc_a_c<2>;
+    func[make_tuple(3, true, NO_SIMD)] = proc_a_c<3>;
+
+    func[make_tuple(1, false, USE_SSE2)] = proc_simd<__m128i, 1>;
+    func[make_tuple(2, false, USE_SSE2)] = proc_simd<__m128i, 2>;
+    func[make_tuple(3, false, USE_SSE2)] = proc_simd<__m128i, 3>;
+
+    func[make_tuple(1, true, USE_SSE2)] = proc_a_simd<__m128i, 1>;
+    func[make_tuple(2, true, USE_SSE2)] = proc_a_simd<__m128i, 2>;
+    func[make_tuple(3, true, USE_SSE2)] = proc_a_simd<__m128i, 3>;
+#if defined(__AVX2__)
+    func[make_tuple(1, false, USE_AVX2)] = proc_simd<__m256i, 1>;
+    func[make_tuple(2, false, USE_AVX2)] = proc_simd<__m256i, 2>;
+    func[make_tuple(3, false, USE_AVX2)] = proc_simd<__m256i, 3>;
+
+    func[make_tuple(1, true, USE_AVX2)] = proc_a_simd<__m256i, 1>;
+    func[make_tuple(2, true, USE_AVX2)] = proc_a_simd<__m256i, 2>;
+    func[make_tuple(3, true, USE_AVX2)] = proc_a_simd<__m256i, 3>;
+#endif
+    return func[make_tuple(strength, aggressive, arch)];
+}
+
 
 
 ReduceFlicker::
@@ -164,10 +182,14 @@ static arch_t get_arch(int opt) noexcept
     if (opt == NO_SIMD || !has_sse2()) {
         return NO_SIMD;
     }
+#if !defined(__AVX2__)
+    return USE_SSE2;
+#else
     if (opt == USE_SSE2 || !has_avx2()) {
         return USE_SSE2;
     }
     return USE_AVX2;
+#endif // __AVX2__
 }
 
 static void validate(bool cond, const char* msg)
@@ -188,7 +210,13 @@ AVSValue __cdecl ReduceFlicker::create(AVSValue args, void*, ise_t* env)
         
         bool aggressive = args[2].AsBool(false);
         bool grey = args[3].AsBool(false);
-        arch_t arch = get_arch(args[4].AsInt(USE_SSE2));
+
+        bool is_avsplus = env->FunctionExists("SetFilterMTMode");
+        arch_t arch = get_arch(args[4].AsInt(USE_AVX2));
+        if (arch == USE_AVX2 && !is_avsplus) {
+            arch = USE_SSE2;
+        }
+
         bool raccess = args[5].AsBool(true);
         return new ReduceFlicker(clip, strength, aggressive, grey, arch, raccess);
 
@@ -209,5 +237,10 @@ AvisynthPluginInit3(ise_t* env, const AVS_Linkage* const vectors)
     env->AddFunction("ReduceFlicker",
                      "c[strength]i[aggressive]b[grey]b[opt]i[raccess]b",
                      ReduceFlicker::create, nullptr);
+    if (env->FunctionExists("SetFilterMTMode")) {
+        static_cast<IScriptEnvironment2*>(
+            env)->SetFilterMTMode("ReduceFlicker", MT_NICE_FILTER, true);
+    }
+
     return "ReduceFlicker for avs2.6/avs+ ver. " REDUCE_FLICKER_VERSION;
 }
