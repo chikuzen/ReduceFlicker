@@ -32,12 +32,11 @@
 	Controls which cpu optimizations are used.
 	Currently, this filter has three(C++, SSE2 and AVX2) routines.
 
-	0 - use C++ routine.
-	1(default) - use SSE2 routine.
-	2 - use AVX2 routine.
-
-	If you are using Avisynth2.60, you shouldn't set this to 2.
-	Avisynth+ has no problem.
+	0 - Use C++ routine.
+	1 - Use SSE2 routine.
+	others(default) - Use AVX2 routine if possible.
+	                  If your machine does not have AVX2 or you are using avisynth2.6,
+	                  fallback to 1.
 
 ### Lisence:
 	GPLv2 or later.
